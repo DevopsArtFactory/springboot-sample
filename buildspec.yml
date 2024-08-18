@@ -35,37 +35,38 @@ phases:
 
       # User Data 스크립트 생성
       - echo "Creating User Data script..."
-      - cat > /tmp/userdata.sh <<- EOM
-#!/bin/bash
-# /tmp/userdata.sh
+      - |
+        cat > /tmp/userdata.sh <<- 'EOM'
+        #!/bin/bash
+        # /tmp/userdata.sh
 
-# 로그 파일 설정
-mkdir -p /var/log/nginx
-exec > /var/log/nginx/userdata.log 2>&1
+        # 로그 파일 설정
+        mkdir -p /var/log/nginx
+        exec > /var/log/nginx/userdata.log 2>&1
 
-# 시스템 업데이트
-echo "Updating the system..."
-yum update -y
+        # 시스템 업데이트
+        echo "Updating the system..."
+        yum update -y
 
-# NGINX 설치
-echo "Installing NGINX..."
-yum install -y nginx
+        # NGINX 설치
+        echo "Installing NGINX..."
+        yum install -y nginx
 
-# NGINX 기본 페이지 작성 (선택 사항)
-echo "Creating default NGINX page..."
-echo "<html><body><h1>Welcome to NGINX on \$(hostname)</h1></body></html>" > /usr/share/nginx/html/index.html
+        # NGINX 기본 페이지 작성 (선택 사항)
+        echo "Creating default NGINX page..."
+        echo "<html><body><h1>Welcome to NGINX on \$(hostname)</h1></body></html>" > /usr/share/nginx/html/index.html
 
-# NGINX 서비스 시작
-echo "Starting NGINX service..."
-systemctl enable nginx
-systemctl start nginx
+        # NGINX 서비스 시작
+        echo "Starting NGINX service..."
+        systemctl enable nginx
+        systemctl start nginx
 
-# 상태 확인
-echo "Checking NGINX status..."
-systemctl status nginx
+        # 상태 확인
+        echo "Checking NGINX status..."
+        systemctl status nginx
 
-echo "User data script executed successfully"
-EOM
+        echo "User data script executed successfully"
+        EOM
 
   post_build:
     commands:
@@ -77,7 +78,8 @@ EOM
           --output text)
 
       # ASG가 없는 경우, 초기화 작업 수행
-      - if [ -z "$ACTIVE_ASG" ]; then
+      - |
+        if [ -z "$ACTIVE_ASG" ]; then
             echo "No active ASG found. Initializing Blue ASG...";
             export TARGET_ASG_NAME=$BLUE_ASG_NAME;
             export IS_INITIAL_DEPLOYMENT=true;
@@ -103,7 +105,8 @@ EOM
           --user-data file:///tmp/userdata.sh
 
       # 최초 배포인 경우 ASG 생성, 그렇지 않으면 기존 ASG 업데이트
-      - if [ "$IS_INITIAL_DEPLOYMENT" == "true" ]; then
+      - |
+        if [ "$IS_INITIAL_DEPLOYMENT" == "true" ]; then
             echo "Creating new ASG: $TARGET_ASG_NAME";
             aws autoscaling create-auto-scaling-group \
                 --auto-scaling-group-name $TARGET_ASG_NAME \
