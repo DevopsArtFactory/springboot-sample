@@ -78,7 +78,7 @@ phases:
       - |
         if [ -z "$ACTIVE_ASG" ]; then
             echo "No active ASG found. Initializing Blue ASG...";
-            export TARGET_ASG_NAME=$BLUE_ASG_NAME;
+            export TARGET_ASG_NAME=$GREEN_ASG_NAME;
             export IS_INITIAL_DEPLOYMENT=true;
         else
             echo "Active ASG found: $ACTIVE_ASG";
