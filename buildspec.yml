@@ -69,7 +69,7 @@ phases:
     commands:
       # 현재 활성화된 ASG 확인 및 변수 설정
       - echo "Checking for existing ASGs..."
-      - ACTIVE_ASG=$(ACTIVE_ASG=$(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names $BLUE_ASG_NAME $GREEN_ASG_NAME --query 'AutoScalingGroups[?DesiredCapacity>`0`].AutoScalingGroupName' --output text))
+      - ACTIVE_ASG=$(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names $BLUE_ASG_NAME $GREEN_ASG_NAME --query 'AutoScalingGroups[?DesiredCapacity>`0`].AutoScalingGroupName' --output text)
 
       # ASG가 없는 경우, 초기화 작업 수행
       - |
