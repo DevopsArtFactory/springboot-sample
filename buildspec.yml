@@ -2,35 +2,38 @@ version: 0.2
 
 phases:
   install:
-    # runtime-versions:
-    #   python: 3.8
     commands:
-      # AWS CLI 설치 및 버전 확인
-      # - pip install awscli
       - aws --version
 
   pre_build:
     commands:
       # 환경 변수 설정
-      - DEPLOY_TIME=$(date +%s)
-      - export SERVICE_NAME=my-service-$DEPLOY_TIME
-      - export BLUE_ASG_NAME=blue-asg-$DEPLOY_TIME
-      - export GREEN_ASG_NAME=green-asg-$DEPLOY_TIME
+      - export SERVICE_NAME=my-service
+      - export BLUE_ASG_NAME_BASE=blue-asg
+      - export GREEN_ASG_NAME_BASE=green-asg
       - export NEW_LAUNCH_CONFIG_NAME=new-launch-config-$(date +%s)
       - export SECURITY_GROUP_ID=sg-09ccb1d3815b1e817  # 미리 생성된 Security Group ID
       - export VPC_ID=vpc-08519e90b0081bea2  # VPC ID를 환경 변수로 설정
       - export TARGET_GROUP_ARN=arn:aws:elasticloadbalancing:ap-northeast-2:066346343248:targetgroup/test/6223a56f300fcc50
-
       # SUBNETS 변수를 AWS CLI를 사용해 동적으로 설정
       - echo "Retrieving private subnets for VPC..."
       - export SUBNETS=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" "Name=tag:Name,Values=private*" --query "Subnets[*].SubnetId" --output text | tr '\t' ',' | sed 's/,$//')
+            # 버전 정보 설정
+      - echo "Determining current ASG version..."
+      - export VERSION=$(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names $(aws autoscaling describe-auto-scaling-groups --query "AutoScalingGroups[?AutoScalingGroupName.starts_with(@, '$BLUE_ASG_NAME_BASE') || AutoScalingGroupName.starts_with(@, '$GREEN_ASG_NAME_BASE')].AutoScalingGroupName" --output text) --query "AutoScalingGroups[*].AutoScalingGroupName" --output text | awk -F'-' '{print $NF}' | sort -n | tail -n 1)
+      - export BLUE_ASG_NAME=${SERVICE_NAME}-${VERSION}
+      - |
+        if [ -z "$VERSION" ]; then 
+          export VERSION=0000; 
+        else
+          export VERSION=$(printf "%04d" $((10#$VERSION + 1))); 
+        fi
+      - echo "New ASG version: $VERSION"
+      # ASG 이름 설정
+      - export GREEN_ASG_NAME=${SERVICE_NAME}-${VERSION}
 
   build:
     commands:
-      # 애플리케이션 빌드
-      - echo "Building application..."
-      # - ./build.sh  # 실제 빌드 스크립트 실행
-
       # User Data 스크립트 생성
       - echo "Creating User Data script..."
       - |
@@ -100,9 +103,9 @@ phases:
         echo "Creating Auto Scaling Group: $TARGET_ASG_NAME";
         aws autoscaling create-auto-scaling-group --auto-scaling-group-name $TARGET_ASG_NAME --launch-configuration-name $NEW_LAUNCH_CONFIG_NAME --min-size 1 --max-size 3 --desired-capacity 1 --target-group-arns $TARGET_GROUP_ARN --vpc-zone-identifier $SUBNETS  --tags Key=Name,Value=$SERVICE_NAME;
         sleep 30;
+
         echo "Getting instance IDs for ASG: $TARGET_ASG_NAME";
         INSTANCE_IDS=$(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names $TARGET_ASG_NAME --query 'AutoScalingGroups[0].Instances[*].InstanceId' --output text);
-        echo $INSTANCE_IDS
 
         DESIRED_CAPACITY=$(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names $TARGET_ASG_NAME --query 'AutoScalingGroups[0].DesiredCapacity' --output text);
         echo "Performing health checks on the new ASG...";
@@ -115,17 +118,14 @@ phases:
             HEALTHY_INSTANCES=0
             echo $INSTANCE_IDS
             for INSTANCE_ID in $INSTANCE_IDS; do
-                echo $INSTANCE_ID
                 # 인스턴스 상태 확인
                 INSTANCE_HEALTH=$(aws elbv2 describe-target-health --target-group-arn $TARGET_GROUP_ARN --targets Id=$INSTANCE_ID --query 'TargetHealthDescriptions[0].TargetHealth.State' --output text)
-                echo $INSTANCE_HEALTH
 
                 if [ "$INSTANCE_HEALTH" == "healthy" ]; then
                     HEALTHY_INSTANCES=$((HEALTHY_INSTANCES + 1))
                 fi
             done
-            echo $HEALTHY_INSTANCES
-            echo $DESIRED_CAPACITY
+
             if [ $HEALTHY_INSTANCES -eq $DESIRED_CAPACITY ]; then
                 echo "All instances are healthy.";
                 break
@@ -142,7 +142,6 @@ phases:
               echo "All instances are healthy. Proceeding with ASG deletion.";
               # 기존 Auto Scaling Group 삭제
               aws autoscaling delete-auto-scaling-group --auto-scaling-group-name $ACTIVE_ASG --force-delete;
-
           else
               echo "Not all instances are healthy after retries. Aborting ASG deletion.";
               exit 1
