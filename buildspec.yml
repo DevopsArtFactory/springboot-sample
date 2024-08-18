@@ -2,11 +2,11 @@ version: 0.2
 
 phases:
   install:
-    runtime-versions:
-      python: 3.8
+    # runtime-versions:
+    #   python: 3.8
     commands:
       # AWS CLI 설치 및 버전 확인
-      - pip install awscli
+      # - pip install awscli
       - aws --version
 
   pre_build:
