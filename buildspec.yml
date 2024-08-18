@@ -106,7 +106,7 @@ phases:
 
             # Target Group에 인스턴스 등록
             echo "Registering instances with Target Group: $TARGET_GROUP_ARN";
-            aws elbv2 register-targets --target-group-arn $TARGET_GROUP_ARN --targets $(echo $INSTANCE_IDS | sed 's/ / --targets /g' | sed 's/^/Targets=/')
+            aws elbv2 register-targets --target-group-arn $TARGET_GROUP_ARN --targets $(echo $INSTANCE_IDS | sed 's/ / --targets /g' | sed 's/^/Id=/')
         else
             echo "Creating Auto Scaling Group: $TARGET_ASG_NAME";
             aws autoscaling create-auto-scaling-group --auto-scaling-group-name $TARGET_ASG_NAME --launch-configuration-name $NEW_LAUNCH_CONFIG_NAME --min-size 1 --max-size 3 --desired-capacity 1 --vpc-zone-identifier $SUBNETS  --tags Key=Name,Value=$SERVICE_NAME;
