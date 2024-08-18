@@ -102,7 +102,8 @@ phases:
 
         echo "Getting instance IDs for ASG: $TARGET_ASG_NAME";
         INSTANCE_IDS=$(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names $TARGET_ASG_NAME --query 'AutoScalingGroups[0].Instances[*].InstanceId' --output text);
-
+        echo $INSTANCE_IDS
+        
         DESIRED_CAPACITY=$(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names $TARGET_ASG_NAME --query 'AutoScalingGroups[0].DesiredCapacity' --output text);
         echo "Performing health checks on the new ASG...";
         MAX_RETRIES=10
@@ -112,10 +113,11 @@ phases:
 
         while [ $ATTEMPTS -lt $MAX_RETRIES ]; do
             HEALTHY_INSTANCES=0
+            echo $INSTANCE_IDS
             for INSTANCE_ID in $INSTANCE_IDS; do
                 echo $INSTANCE_ID
                 # 인스턴스 상태 확인
-                INSTANCE_HEALTH=$(aws elbv2 describe-target-health --target-group-arn $TARGET_GROUP_ARN --targets $(echo $INSTANCE_IDS | sed 's/ / --targets Id=/g' | sed 's/^/Id=/') --query 'TargetHealthDescriptions[0].TargetHealth.State' --output text)
+                INSTANCE_HEALTH=$(aws elbv2 describe-target-health --target-group-arn $TARGET_GROUP_ARN --targets Id=$INSTANCE_ID --query 'TargetHealthDescriptions[0].TargetHealth.State' --output text)
                 echo $INSTANCE_HEALTH
 
                 if [ "$INSTANCE_HEALTH" == "healthy" ]; then
