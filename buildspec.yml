@@ -117,10 +117,7 @@ phases:
 
             # Target Group에 인스턴스 등록
             echo "Registering instances with Target Group: $TARGET_GROUP_ARN";
-            aws elbv2 register-targets --target-group-arn $TARGET_GROUP_ARN --targets $(echo $INSTANCE_IDS | sed 's/ / --targets /g' | sed 's/^/Targets=/')
-
-            echo "Swapping to new ASG...";
-            aws elb register-instances-with-load-balancer --load-balancer-name my-load-balancer --instances $INSTANCE_IDS;
+            aws elbv2 register-targets --target-group-arn $TARGET_GROUP_ARN --targets $(echo $INSTANCE_IDS | sed 's/ / --targets /g' | sed 's/^/Id=/')
 
             echo "Deleting old Auto Scaling Group: $ACTIVE_ASG";
             aws autoscaling delete-auto-scaling-group --auto-scaling-group-name $ACTIVE_ASG --force-delete;
