@@ -1,0 +1,139 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.8
+    commands:
+      # AWS CLI 설치 및 버전 확인
+      - pip install awscli
+      - aws --version
+
+  pre_build:
+    commands:
+      # 환경 변수 설정
+      - export SERVICE_NAME=my-service
+      - export BLUE_ASG_NAME=blue-asg
+      - export GREEN_ASG_NAME=green-asg
+      - export NEW_LAUNCH_CONFIG_NAME=new-launch-config
+      - export SECURITY_GROUP_ID=sg-0dc54026c9453e145  # 미리 생성된 Security Group ID
+      - export VPC_ID=vpc-08519e90b0081bea2  # VPC ID를 환경 변수로 설정
+
+      # SUBNETS 변수를 AWS CLI를 사용해 동적으로 설정
+      - echo "Retrieving private subnets for VPC..."
+      - export SUBNETS=$(aws ec2 describe-subnets \
+          --filters "Name=vpc-id,Values=$VPC_ID" "Name=tag:Name,Values=private*" \
+          --query "Subnets[*].SubnetId" \
+          --output text | tr '\t' ',' | sed 's/,$//')
+
+  build:
+    commands:
+      # 애플리케이션 빌드
+      - echo "Building application..."
+      # - ./build.sh  # 실제 빌드 스크립트 실행
+
+      # User Data 스크립트 생성
+      - echo "Creating User Data script..."
+      - cat > /tmp/userdata.sh <<- EOM
+#!/bin/bash
+# /tmp/userdata.sh
+
+# 로그 파일 설정
+mkdir -p /var/log/nginx
+exec > /var/log/nginx/userdata.log 2>&1
+
+# 시스템 업데이트
+echo "Updating the system..."
+yum update -y
+
+# NGINX 설치
+echo "Installing NGINX..."
+yum install -y nginx
+
+# NGINX 기본 페이지 작성 (선택 사항)
+echo "Creating default NGINX page..."
+echo "<html><body><h1>Welcome to NGINX on \$(hostname)</h1></body></html>" > /usr/share/nginx/html/index.html
+
+# NGINX 서비스 시작
+echo "Starting NGINX service..."
+systemctl enable nginx
+systemctl start nginx
+
+# 상태 확인
+echo "Checking NGINX status..."
+systemctl status nginx
+
+echo "User data script executed successfully"
+EOM
+
+  post_build:
+    commands:
+      # 현재 활성화된 ASG 확인 및 변수 설정
+      - echo "Checking for existing ASGs..."
+      - ACTIVE_ASG=$(aws autoscaling describe-auto-scaling-groups \
+          --auto-scaling-group-names $BLUE_ASG_NAME $GREEN_ASG_NAME \
+          --query 'AutoScalingGroups[?DesiredCapacity>0].AutoScalingGroupName' \
+          --output text)
+
+      # ASG가 없는 경우, 초기화 작업 수행
+      - if [ -z "$ACTIVE_ASG" ]; then
+            echo "No active ASG found. Initializing Blue ASG...";
+            export TARGET_ASG_NAME=$BLUE_ASG_NAME;
+            export IS_INITIAL_DEPLOYMENT=true;
+        else
+            echo "Active ASG found: $ACTIVE_ASG";
+            export IS_INITIAL_DEPLOYMENT=false;
+            # ACTIVE_ASG가 BLUE_ASG_NAME인지 확인하고 스왑
+            if [ "$ACTIVE_ASG" == "$BLUE_ASG_NAME" ]; then
+                echo "Currently active ASG is Blue. Swapping to Green...";
+                export TARGET_ASG_NAME=$GREEN_ASG_NAME;
+            else
+                echo "Currently active ASG is Green. Swapping to Blue...";
+                export TARGET_ASG_NAME=$BLUE_ASG_NAME;
+            fi
+        fi
+
+      # 새로운 Launch Configuration 생성
+      - echo "Creating new Launch Configuration..."
+      - aws autoscaling create-launch-configuration \
+          --launch-configuration-name $NEW_LAUNCH_CONFIG_NAME \
+          --image-id ami-0c2acfcb2ac4d02a0 \
+          --instance-type t3.small \
+          --user-data file:///tmp/userdata.sh
+
+      # 최초 배포인 경우 ASG 생성, 그렇지 않으면 기존 ASG 업데이트
+      - if [ "$IS_INITIAL_DEPLOYMENT" == "true" ]; then
+            echo "Creating new ASG: $TARGET_ASG_NAME";
+            aws autoscaling create-auto-scaling-group \
+                --auto-scaling-group-name $TARGET_ASG_NAME \
+                --launch-configuration-name $NEW_LAUNCH_CONFIG_NAME \
+                --min-size 1 \
+                --max-size 3 \
+                --desired-capacity 1 \
+                --vpc-zone-identifier $SUBNETS \
+                --security-groups $SECURITY_GROUP_ID \
+                --tags Key=Name,Value=$SERVICE_NAME;
+        else
+            echo "Updating Auto Scaling Group: $TARGET_ASG_NAME";
+            aws autoscaling update-auto-scaling-group \
+                --auto-scaling-group-name $TARGET_ASG_NAME \
+                --launch-configuration-name $NEW_LAUNCH_CONFIG_NAME \
+                --vpc-zone-identifier $SUBNETS \
+                --security-groups $SECURITY_GROUP_ID;
+            echo "Swapping to new ASG...";
+            INSTANCE_IDS=$(aws autoscaling describe-auto-scaling-groups \
+                --auto-scaling-group-names $TARGET_ASG_NAME \
+                --query 'AutoScalingGroups[0].Instances[*].InstanceId' \
+                --output text);
+            aws elb register-instances-with-load-balancer \
+                --load-balancer-name my-load-balancer \
+                --instances $INSTANCE_IDS;
+            echo "Deleting old Auto Scaling Group: $ACTIVE_ASG";
+            aws autoscaling delete-auto-scaling-group \
+                --auto-scaling-group-name $ACTIVE_ASG \
+                --force-delete;
+        fi
+
+artifacts:
+  files:
+    - '**/*'
