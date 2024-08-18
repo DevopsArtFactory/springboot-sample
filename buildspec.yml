@@ -96,16 +96,50 @@ phases:
 
       # 최초 배포인 경우 ASG 생성, 그렇지 않으면 기존 ASG 업데이트
       - |
-        if [ "$IS_INITIAL_DEPLOYMENT" == "true" ]; then
-            echo "Creating new ASG: $TARGET_ASG_NAME";
-            aws autoscaling create-auto-scaling-group --auto-scaling-group-name $TARGET_ASG_NAME --launch-configuration-name $NEW_LAUNCH_CONFIG_NAME --min-size 1 --max-size 3 --desired-capacity 1 --target-group-arns $TARGET_GROUP_ARN --vpc-zone-identifier $SUBNETS  --tags Key=Name,Value=$SERVICE_NAME;
-        else
-            echo "Creating Auto Scaling Group: $TARGET_ASG_NAME";
-            aws autoscaling create-auto-scaling-group --auto-scaling-group-name $TARGET_ASG_NAME --launch-configuration-name $NEW_LAUNCH_CONFIG_NAME --min-size 1 --max-size 3 --desired-capacity 1 --target-group-arns $TARGET_GROUP_ARN --vpc-zone-identifier $SUBNETS  --tags Key=Name,Value=$SERVICE_NAME;
+        echo "Creating Auto Scaling Group: $TARGET_ASG_NAME";
+        aws autoscaling create-auto-scaling-group --auto-scaling-group-name $TARGET_ASG_NAME --launch-configuration-name $NEW_LAUNCH_CONFIG_NAME --min-size 1 --max-size 3 --desired-capacity 1 --target-group-arns $TARGET_GROUP_ARN --vpc-zone-identifier $SUBNETS  --tags Key=Name,Value=$SERVICE_NAME;
 
-            echo "Deleting old Auto Scaling Group: $ACTIVE_ASG";
-            aws autoscaling delete-auto-scaling-group --auto-scaling-group-name $ACTIVE_ASG --force-delete;
-        fi
+        echo "Performing health checks on the new ASG...";
+        MAX_RETRIES=10
+        RETRY_INTERVAL=30
+        ATTEMPTS=0
+        HEALTHY_INSTANCES=0
+
+        while [ $ATTEMPTS -lt $MAX_RETRIES ]; do
+            HEALTHY_INSTANCES=0
+            for INSTANCE_ID in $INSTANCE_IDS; do
+                # 인스턴스 상태 확인
+                INSTANCE_HEALTH=$(aws elbv2 describe-target-health --target-group-arn $TARGET_GROUP_ARN --targets Id=$INSTANCE_ID --query 'TargetHealthDescriptions[0].TargetHealth.State' --output text)
+
+                if [ "$INSTANCE_HEALTH" == "healthy" ]; then
+                    HEALTHY_INSTANCES=$((HEALTHY_INSTANCES + 1))
+                fi
+            done
+
+            if [ "$HEALTHY_INSTANCES" -eq "$(echo $INSTANCE_IDS | wc -w)" ]; then
+                echo "All instances are healthy.";
+                break
+            else
+                echo "Not all instances are healthy. Retrying in $RETRY_INTERVAL seconds...";
+                sleep $RETRY_INTERVAL
+            fi
+
+            ATTEMPTS=$((ATTEMPTS + 1))
+        done
+        
+        if [ "$IS_INITIAL_DEPLOYMENT" == "false" ]; then
+          if [ "$HEALTHY_INSTANCES" -eq "$(echo $INSTANCE_IDS | wc -w)" ]; then
+              echo "All instances are healthy. Proceeding with ASG deletion.";
+              # 기존 Auto Scaling Group 삭제
+              aws autoscaling delete-auto-scaling-group --auto-scaling-group-name $ACTIVE_ASG --force-delete;
+
+          else
+              echo "Not all instances are healthy after retries. Aborting ASG deletion.";
+              exit 1
+          fi
+        else
+              echo "All instances are healthy.";
+        fi  
 
 artifacts:
   files:
