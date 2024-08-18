@@ -111,27 +111,25 @@ phases:
             for INSTANCE_ID in $INSTANCE_IDS; do
                 # 인스턴스 상태 확인
                 INSTANCE_HEALTH=$(aws elbv2 describe-target-health --target-group-arn $TARGET_GROUP_ARN --targets Id=$INSTANCE_ID --query 'TargetHealthDescriptions[0].TargetHealth.State' --output text)
-                echo $INSTANCE_ID
-                echo $INSTANCE_HEALTH
 
                 if [ "$INSTANCE_HEALTH" == "healthy" ]; then
                     HEALTHY_INSTANCES=$((HEALTHY_INSTANCES + 1))
                 fi
             done
-
-              if [ "$HEALTHY_INSTANCES" -eq "$DESIRED_CAPACITY" ]; then
-                  echo "All instances are healthy.";
-                  break
-              else
-                  echo "Not all instances are healthy. Retrying in $RETRY_INTERVAL seconds...";
-                  sleep $RETRY_INTERVAL
-              fi
+            echo $HEALTHY_INSTANCES
+            if [ $HEALTHY_INSTANCES -eq $DESIRED_CAPACITY ]; then
+                echo "All instances are healthy.";
+                break
+            else
+                echo "Not all instances are healthy. Retrying in $RETRY_INTERVAL seconds...";
+                sleep $RETRY_INTERVAL
+            fi
 
               ATTEMPTS=$((ATTEMPTS + 1))
         done
         
         if [ "$IS_INITIAL_DEPLOYMENT" == "false" ]; then
-          if [ "$HEALTHY_INSTANCES" -eq "$(echo $INSTANCE_IDS | wc -w)" ]; then
+          if [ $HEALTHY_INSTANCES -eq $(echo $INSTANCE_IDS | wc -w) ]; then
               echo "All instances are healthy. Proceeding with ASG deletion.";
               # 기존 Auto Scaling Group 삭제
               aws autoscaling delete-auto-scaling-group --auto-scaling-group-name $ACTIVE_ASG --force-delete;
