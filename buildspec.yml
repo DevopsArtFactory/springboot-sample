@@ -22,10 +22,7 @@ phases:
 
       # SUBNETS 변수를 AWS CLI를 사용해 동적으로 설정
       - echo "Retrieving private subnets for VPC..."
-      - export SUBNETS=$(aws ec2 describe-subnets \
-          --filters "Name=vpc-id,Values=$VPC_ID" "Name=tag:Name,Values=private*" \
-          --query "Subnets[*].SubnetId" \
-          --output text | tr '\t' ',' | sed 's/,$//')
+      - export SUBNETS=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" "Name=tag:Name,Values=private*" --query "Subnets[*].SubnetId" --output text | tr '\t' ',' | sed 's/,$//')
 
   build:
     commands:
@@ -72,10 +69,7 @@ phases:
     commands:
       # 현재 활성화된 ASG 확인 및 변수 설정
       - echo "Checking for existing ASGs..."
-      - ACTIVE_ASG=$(aws autoscaling describe-auto-scaling-groups \
-          --auto-scaling-group-names $BLUE_ASG_NAME $GREEN_ASG_NAME \
-          --query 'AutoScalingGroups[?DesiredCapacity>0].AutoScalingGroupName' \
-          --output text)
+      - ACTIVE_ASG=$(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names $BLUE_ASG_NAME $GREEN_ASG_NAME --query 'AutoScalingGroups[?DesiredCapacity>0].AutoScalingGroupName' --output text)
 
       # ASG가 없는 경우, 초기화 작업 수행
       - |
@@ -98,55 +92,30 @@ phases:
 
       # 새로운 Launch Configuration 생성
       - echo "Creating new Launch Configuration..."
-      - aws autoscaling create-launch-configuration \
-          --launch-configuration-name $NEW_LAUNCH_CONFIG_NAME \
-          --image-id ami-0c2acfcb2ac4d02a0 \
-          --instance-type t3.small \
-          --user-data file:///tmp/userdata.sh
+      - aws autoscaling create-launch-configuration --launch-configuration-name $NEW_LAUNCH_CONFIG_NAME --image-id ami-0c2acfcb2ac4d02a0 --instance-type t3.small --user-data file:///tmp/userdata.sh
 
       # 최초 배포인 경우 ASG 생성, 그렇지 않으면 기존 ASG 업데이트
       - |
         if [ "$IS_INITIAL_DEPLOYMENT" == "true" ]; then
             echo "Creating new ASG: $TARGET_ASG_NAME";
-            aws autoscaling create-auto-scaling-group \
-                --auto-scaling-group-name $TARGET_ASG_NAME \
-                --launch-configuration-name $NEW_LAUNCH_CONFIG_NAME \
-                --min-size 1 \
-                --max-size 3 \
-                --desired-capacity 1 \
-                --vpc-zone-identifier $SUBNETS \
-                --security-groups $SECURITY_GROUP_ID \
-                --tags Key=Name,Value=$SERVICE_NAME;
+            aws autoscaling create-auto-scaling-group -auto-scaling-group-name $TARGET_ASG_NAME --launch-configuration-name $NEW_LAUNCH_CONFIG_NAME --min-size 1 --max-size 3 --desired-capacity 1 --vpc-zone-identifier $SUBNETS --security-groups $SECURITY_GROUP_ID --tags Key=Name,Value=$SERVICE_NAME;
         else
             echo "Updating Auto Scaling Group: $TARGET_ASG_NAME";
-            aws autoscaling update-auto-scaling-group \
-                --auto-scaling-group-name $TARGET_ASG_NAME \
-                --launch-configuration-name $NEW_LAUNCH_CONFIG_NAME \
-                --vpc-zone-identifier $SUBNETS \
-                --security-groups $SECURITY_GROUP_ID;
+            aws autoscaling update-auto-scaling-group --auto-scaling-group-name $TARGET_ASG_NAME --launch-configuration-name $NEW_LAUNCH_CONFIG_NAME --vpc-zone-identifier $SUBNETS --security-groups $SECURITY_GROUP_ID;
 
             # 인스턴스 등록을 위한 준비
             echo "Getting instance IDs for ASG: $TARGET_ASG_NAME";
-            INSTANCE_IDS=$(aws autoscaling describe-auto-scaling-groups \
-                --auto-scaling-group-names $TARGET_ASG_NAME \
-                --query 'AutoScalingGroups[0].Instances[*].InstanceId' \
-                --output text);
+            INSTANCE_IDS=$(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names $TARGET_ASG_NAME --query 'AutoScalingGroups[0].Instances[*].InstanceId' --output text);
 
             # Target Group에 인스턴스 등록
             echo "Registering instances with Target Group: $TARGET_GROUP_ARN";
-            aws elbv2 register-targets \
-                --target-group-arn $TARGET_GROUP_ARN \
-                --targets $(echo $INSTANCE_IDS | sed 's/ / --targets /g' | sed 's/^/Targets=/')
+            aws elbv2 register-targets --target-group-arn $TARGET_GROUP_ARN --targets $(echo $INSTANCE_IDS | sed 's/ / --targets /g' | sed 's/^/Targets=/')
 
             echo "Swapping to new ASG...";
-            aws elb register-instances-with-load-balancer \
-                --load-balancer-name my-load-balancer \
-                --instances $INSTANCE_IDS;
+            aws elb register-instances-with-load-balancer --load-balancer-name my-load-balancer --instances $INSTANCE_IDS;
 
             echo "Deleting old Auto Scaling Group: $ACTIVE_ASG";
-            aws autoscaling delete-auto-scaling-group \
-                --auto-scaling-group-name $ACTIVE_ASG \
-                --force-delete;
+            aws autoscaling delete-auto-scaling-group --auto-scaling-group-name $ACTIVE_ASG --force-delete;
         fi
 
 artifacts:
