@@ -21,19 +21,16 @@ phases:
             # 버전 정보 설정
       - echo "Determining current ASG version..."
       - export VERSION=$(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names $(aws autoscaling describe-auto-scaling-groups --query "AutoScalingGroups[?AutoScalingGroupName.starts_with(@, '$BLUE_ASG_NAME_BASE') || AutoScalingGroupName.starts_with(@, '$GREEN_ASG_NAME_BASE')].AutoScalingGroupName" --output text) --query "AutoScalingGroups[*].AutoScalingGroupName" --output text | awk -F'-' '{print $NF}' | sort -n | tail -n 1)
-      - export BLUE_ASG_NAME=${SERVICE_NAME}-${VERSION}
-      - echo "Old ASG version - ${BLUE_ASG_NAME}"
-
       - |
         if [ -z "$VERSION" ]; then 
-          export VERSION=0000; 
+          export VERSION=0000;
         else
+          export BLUE_ASG_NAME=${SERVICE_NAME}-${VERSION}
+          echo "Old ASG version - ${BLUE_ASG_NAME}"
           export VERSION=$(printf "%04d" $((10#$VERSION + 1))); 
         fi
-     
-      # ASG 이름 설정
-      - export GREEN_ASG_NAME=${SERVICE_NAME}-${VERSION}
-      - echo "New ASG version - ${GREEN_ASG_NAME}"
+        export GREEN_ASG_NAME=${SERVICE_NAME}-${VERSION}
+        echo "New ASG version - ${GREEN_ASG_NAME}"
   build:
     commands:
       # User Data 스크립트 생성
@@ -88,11 +85,8 @@ phases:
             export IS_INITIAL_DEPLOYMENT=false;
             # ACTIVE_ASG가 BLUE_ASG_NAME인지 확인하고 스왑
             if [ "$ACTIVE_ASG" == "$BLUE_ASG_NAME" ]; then
-                echo "Currently active ASG is Blue. Swapping to Green...";
+                echo "Currently active ASG is $BLUE_ASG_NAME. Swapping to $GREEN_ASG_NAME...";
                 export TARGET_ASG_NAME=$GREEN_ASG_NAME;
-            else
-                echo "Currently active ASG is Green. Swapping to Blue...";
-                export TARGET_ASG_NAME=$BLUE_ASG_NAME;
             fi
         fi
 
