@@ -98,7 +98,7 @@ phases:
       - |
         if [ "$IS_INITIAL_DEPLOYMENT" == "true" ]; then
             echo "Creating new ASG: $TARGET_ASG_NAME";
-            aws autoscaling create-auto-scaling-group -auto-scaling-group-name $TARGET_ASG_NAME --launch-configuration-name $NEW_LAUNCH_CONFIG_NAME --min-size 1 --max-size 3 --desired-capacity 1 --vpc-zone-identifier $SUBNETS --security-groups $SECURITY_GROUP_ID --tags Key=Name,Value=$SERVICE_NAME;
+            aws autoscaling create-auto-scaling-group --auto-scaling-group-name $TARGET_ASG_NAME --launch-configuration-name $NEW_LAUNCH_CONFIG_NAME --min-size 1 --max-size 3 --desired-capacity 1 --vpc-zone-identifier $SUBNETS --security-groups $SECURITY_GROUP_ID --tags Key=Name,Value=$SERVICE_NAME;
         else
             echo "Updating Auto Scaling Group: $TARGET_ASG_NAME";
             aws autoscaling update-auto-scaling-group --auto-scaling-group-name $TARGET_ASG_NAME --launch-configuration-name $NEW_LAUNCH_CONFIG_NAME --vpc-zone-identifier $SUBNETS --security-groups $SECURITY_GROUP_ID;
