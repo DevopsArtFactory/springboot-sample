@@ -9,8 +9,6 @@ phases:
     commands:
       # 환경 변수 설정
       - export SERVICE_NAME=my-service
-      - export BLUE_ASG_NAME_BASE=blue-asg
-      - export GREEN_ASG_NAME_BASE=green-asg
       - export NEW_LAUNCH_CONFIG_NAME=new-launch-config-$(date +%s)
       - export SECURITY_GROUP_ID=sg-09ccb1d3815b1e817  # 미리 생성된 Security Group ID
       - export VPC_ID=vpc-08519e90b0081bea2  # VPC ID를 환경 변수로 설정
@@ -20,7 +18,7 @@ phases:
       - export SUBNETS=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" "Name=tag:Name,Values=private*" --query "Subnets[*].SubnetId" --output text | tr '\t' ',' | sed 's/,$//')
             # 버전 정보 설정
       - echo "Determining current ASG version..."
-      - export VERSION=$(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names $(aws autoscaling describe-auto-scaling-groups --query "AutoScalingGroups[?AutoScalingGroupName.starts_with(@, '$BLUE_ASG_NAME_BASE') || AutoScalingGroupName.starts_with(@, '$GREEN_ASG_NAME_BASE')].AutoScalingGroupName" --output text) --query "AutoScalingGroups[*].AutoScalingGroupName" --output text | awk -F'-' '{print $NF}' | sort -n | tail -n 1)
+      - export VERSION=$(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names $(aws autoscaling describe-auto-scaling-groups --query "AutoScalingGroups[?AutoScalingGroupName.starts_with(@, '$SERVICE_NAME')].AutoScalingGroupName" --output text) --query "AutoScalingGroups[*].AutoScalingGroupName" --output text | awk -F'-' '{print $NF}' | sort -n | tail -n 1)
       - |
         if [ -z "$VERSION" ]; then 
           export VERSION=0000;
@@ -97,7 +95,7 @@ phases:
       # 최초 배포인 경우 ASG 생성, 그렇지 않으면 기존 ASG 업데이트
       - |
         echo "Creating Auto Scaling Group: $TARGET_ASG_NAME";
-        aws autoscaling create-auto-scaling-group --auto-scaling-group-name $TARGET_ASG_NAME --launch-configuration-name $NEW_LAUNCH_CONFIG_NAME --min-size 1 --max-size 3 --desired-capacity 1 --target-group-arns $TARGET_GROUP_ARN --vpc-zone-identifier $SUBNETS  --tags Key=Name,Value=$SERVICE_NAME;
+        aws autoscaling create-auto-scaling-group --auto-scaling-group-name $TARGET_ASG_NAME --launch-configuration-name $NEW_LAUNCH_CONFIG_NAME --min-size 1 --max-size 3 --desired-capacity 1 --target-group-arns $TARGET_GROUP_ARN --vpc-zone-identifier $SUBNETS  --tags Key=Name,Value=$TARGET_ASG_NAME;
         sleep 30;
 
         echo "Getting instance IDs for ASG: $TARGET_ASG_NAME";
