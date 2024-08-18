@@ -12,7 +12,7 @@ phases:
   pre_build:
     commands:
       # 환경 변수 설정
-      - DEPLOY_TIME=$(date %s)
+      - DEPLOY_TIME=$(date +%s)
       - export SERVICE_NAME=my-service-$DEPLOY_TIME
       - export BLUE_ASG_NAME=blue-asg-$DEPLOY_TIME
       - export GREEN_ASG_NAME=green-asg-$DEPLOY_TIME
