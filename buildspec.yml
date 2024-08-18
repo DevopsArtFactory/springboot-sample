@@ -99,11 +99,11 @@ phases:
       - |
         echo "Creating Auto Scaling Group: $TARGET_ASG_NAME";
         aws autoscaling create-auto-scaling-group --auto-scaling-group-name $TARGET_ASG_NAME --launch-configuration-name $NEW_LAUNCH_CONFIG_NAME --min-size 1 --max-size 3 --desired-capacity 1 --target-group-arns $TARGET_GROUP_ARN --vpc-zone-identifier $SUBNETS  --tags Key=Name,Value=$SERVICE_NAME;
-
+        sleep 30;
         echo "Getting instance IDs for ASG: $TARGET_ASG_NAME";
         INSTANCE_IDS=$(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names $TARGET_ASG_NAME --query 'AutoScalingGroups[0].Instances[*].InstanceId' --output text);
         echo $INSTANCE_IDS
-        
+
         DESIRED_CAPACITY=$(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names $TARGET_ASG_NAME --query 'AutoScalingGroups[0].DesiredCapacity' --output text);
         echo "Performing health checks on the new ASG...";
         MAX_RETRIES=10
