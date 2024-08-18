@@ -15,7 +15,7 @@ phases:
       - export SERVICE_NAME=my-service
       - export BLUE_ASG_NAME=blue-asg
       - export GREEN_ASG_NAME=green-asg
-      - export NEW_LAUNCH_CONFIG_NAME=new-launch-config
+      - export NEW_LAUNCH_CONFIG_NAME=new-launch-config+$(date +%s)
       - export SECURITY_GROUP_ID=sg-09ccb1d3815b1e817  # 미리 생성된 Security Group ID
       - export VPC_ID=vpc-08519e90b0081bea2  # VPC ID를 환경 변수로 설정
       - export TARGET_GROUP_ARN=arn:aws:elasticloadbalancing:ap-northeast-2:066346343248:targetgroup/test/6223a56f300fcc50
