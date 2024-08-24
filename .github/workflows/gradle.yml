@@ -8,10 +8,11 @@
 name: Java CI with Gradle
 
 on:
-  push:
-    branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
+      - dev
+    types: [closed]
     
 permissions:
   id-token: write
