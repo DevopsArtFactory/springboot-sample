@@ -1,0 +1,67 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+# This workflow will build a Java project with Gradle and cache/restore any dependencies to improve the workflow execution time
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-java-with-gradle
+
+name: Java CI with Gradle
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+    
+permissions:
+  id-token: write
+  contents: read
+  
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    # Get Short SHA in 8 Length
+    - name: get shortsha
+      id: vars
+      run: |
+        echo "sha_short=$(git rev-parse --short=8 ${{ github.sha }}) >> $GITHUB_OUTPUT
+
+    # Configure Gradle for optimal use in GitHub Actions, including caching of downloaded dependencies.
+    # See: https://github.com/gradle/actions/blob/main/setup-gradle/README.md
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
+
+    - name: Build with Gradle Wrapper
+      run: ./gradlew bootBuildImage --imageName=${{ secrets.AWS_ACCOUNT_NUM }}.dkr.ecr.ap-northeast-2.amazonaws.com/sample:${{ steps.vars.outputs.sha_short }}
+      
+    # AWS 인증
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-region: ap-northeast-2
+        role-to-assume: ${{ secrets.ASSUME_IAM_ROLE }}
+
+    # ECR LOGIN
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Publish Docker image
+      run: |
+          docker tag ${{ secrets.AWS_ACCOUNT_NUM }}.dkr.ecr.ap-northeast-2.amazonaws.com/sample:${{ steps.vars.outputs.sha_short }} ${{ secrets.AWS_ACCOUNT_NUM }}.dkr.ecr.ap-northeast-2.amazonaws.com/sample:latest
+          docker push ${{ secrets.AWS_ACCOUNT_NUM }}.dkr.ecr.ap-northeast-2.amazonaws.com/sample:${{ steps.vars.outputs.sha_short }}
+          docker push ${{ secrets.AWS_ACCOUNT_NUM }}.dkr.ecr.ap-northeast-2.amazonaws.com/sample:latest
+          
+      
