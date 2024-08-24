@@ -49,7 +49,7 @@ jobs:
       
     # AWS 인증
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v1
+      uses: aws-actions/configure-aws-credentials@v4
       with:
         aws-region: ap-northeast-2
         role-to-assume: ${{ secrets.ASSUME_IAM_ROLE }}
