@@ -67,3 +67,22 @@ jobs:
           docker push ${{ secrets.AWS_ACCOUNT_NUM }}.dkr.ecr.${{ env.REGION }}.amazonaws.com/sample:latest
           
       
+    - name: Fill in the new image ID in the Amazon ECS task definition
+      id: task-def
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: task-definition.json
+        container-name: demo
+        image: ${{ secrets.AWS_ACCOUNT_NUM }}.dkr.ecr.${{ env.REGION }}.amazonaws.com/sample:${{ steps.vars.outputs.sha_short }}
+
+    - name: Deploy to Amazon ECS
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+      with:
+        task-definition: task-definition.json
+        service: demo-tmcdapne2
+        cluster: demo-tmcdapne2
+        wait-for-service-stability: true
+        codedeploy-appspec: appspec.json
+        codedeploy-application: demo_app
+        codedeploy-deployment-group: demo_app
+  
