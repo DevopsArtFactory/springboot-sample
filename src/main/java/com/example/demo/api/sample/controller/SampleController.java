@@ -19,7 +19,7 @@ public class SampleController {
 
     @GetMapping("/terraform")
     @ResponseStatus(HttpStatus.OK)
-    public String getHello(){
+    public String getTerraform(){
         return "<h1>Hello, Terraform Master Class</h1>";
     }
 
