@@ -12,6 +12,9 @@ java {
 		languageVersion = JavaLanguageVersion.of(17)
 	}
 }
+ext {
+	springCloudAwsVersion = '3.2.0'
+}
 
 repositories {
 	mavenCentral()
@@ -19,18 +22,19 @@ repositories {
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
-//	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
-
-	/* DB */
-//	implementation 'org.flywaydb:flyway-core'
-//	implementation 'org.flywaydb:flyway-database-postgresql'
-//	runtimeOnly 'org.postgresql:postgresql'
 
 	/* Lombok */
 	compileOnly 'org.projectlombok:lombok:1.18.22'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+	// aws setting
+	implementation 'org.springframework.cloud:spring-cloud-starter-bootstrap:4.0.1'
+	implementation platform("io.awspring.cloud:spring-cloud-aws-dependencies:${springCloudAwsVersion}")
+	implementation "io.awspring.cloud:spring-cloud-aws-starter-secrets-manager:${springCloudAwsVersion}"
+	implementation "io.awspring.cloud:spring-cloud-aws-autoconfigure:${springCloudAwsVersion}"
+	implementation 'software.amazon.awssdk:sts:2.28.15'
 
 }
 

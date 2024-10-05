@@ -1,3 +1,9 @@
 spring:
   application:
     name: demo
+  config:
+    import: optional:aws-secretsmanager:/secret/demo
+
+sample:
+  id: ${id}
+  password: ${password}
