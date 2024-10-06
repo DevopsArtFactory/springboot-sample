@@ -63,7 +63,7 @@ jobs:
 
     - name: Publish Docker image
       run: |
-          docker push ${{ secrets.AWS_ACCOUNT_NUM }}.dkr.ecr.${{ env.REGION }}.amazonaws.com/demoapp:${{ steps.vars.outputs.sha_short }}          
+          docker push ${{ secrets.AWS_ACCOUNT_NUM }}.dkr.ecr.${{ env.REGION }}.amazonaws.com/demoapp:d${{ steps.vars.outputs.sha_short }}          
       
     # - name: Download task definition
     #   run: |
