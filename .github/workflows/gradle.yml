@@ -47,7 +47,7 @@ jobs:
       uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
 
     - name: Build with Gradle Wrapper
-      run: ./gradlew bootBuildImage --imageName=${{ secrets.AWS_ACCOUNT_NUM }}.dkr.ecr.${{ env.REGION }}.amazonaws.com/demoapp:${{ steps.vars.outputs.sha_short }}
+      run: ./gradlew bootBuildImage --imageName=${{ secrets.AWS_ACCOUNT_NUM }}.dkr.ecr.${{ env.REGION }}.amazonaws.com/demoapp:d${{ steps.vars.outputs.sha_short }}
       
     # AWS 인증
     - name: Configure AWS credentials
