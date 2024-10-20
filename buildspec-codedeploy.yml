@@ -15,9 +15,8 @@ phases:
     commands:
       - TASK_DEFINITION_ARN=$(aws ecs describe-task-definition --task-definition demo-tmcdapne2 --query 'taskDefinition.taskDefinitionArn' --output text)
       - echo $TASK_DEFINITION_ARN
-      - ls
-      - sed -i '' "s/\[TaskDefinition ARN\]/${TASK_DEFINITION_ARN}/g" appspec.json
-      - json_string=$(jq -c . appspec.json| jq -Rr '@json' | sed 's/"/\\"/g') 
+      - sed -i "s/\[TaskDefinition ARN\]/${TASK_DEFINITION_ARN}/g" appspec.json
+      - json_string=$(jq -c . ./appspec.json| jq -Rr '@json' | sed 's/"/\\"/g') 
       - echo ${json_string}
-      - sed -i '' "s/DEPLOYMENT_SPEC/${json_string}|g" codedeploy-template.json
+      - sed -i "s/DEPLOYMENT_SPEC/${json_string}/g" codedeploy-template.json
       - aws deploy create-deployment --cli-input-json file://codedeploy-template.json
