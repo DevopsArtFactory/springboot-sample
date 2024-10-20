@@ -6,9 +6,9 @@
                 "Type": "AWS::ECS::Service",
                 "Properties": {
                     "TaskDefinition": "[TaskDefinition ARN]",
-                    "LoadBalancerInfo": {"ContainerName": "demo", "ContainerPort": 8080},
-                },
+                    "LoadBalancerInfo": {"ContainerName": "demo", "ContainerPort": 8080}
+                }
             }
         }
-    ],
+    ]
 }

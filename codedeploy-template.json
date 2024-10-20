@@ -1,0 +1,10 @@
+{
+    "applicationName": "demo_app",
+    "deploymentGroupName":  "demo_app",
+    "revision": {
+        "revisionType": "AppSpecContent",
+        "appSpecContent": {
+            "content": DEPLOYMENT_SPEC
+        }
+    }
+}

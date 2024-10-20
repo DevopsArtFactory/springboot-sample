@@ -1,0 +1,22 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - aws --version
+
+  pre_build:
+    commands:
+      # 환경 변수 설정
+      - aws ecs describe-task-definition --task-definition demo-tmcdapne2 --query 'taskDefinition' --output json > task-definition.json
+      - jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)' task-definition.json > cleaned-task-definition.json
+      - aws ecs register-task-definition --cli-input-json file://cleaned-task-definition.json > /dev/null
+  build:
+    commands:
+      - TASK_DEFINITION_ARN=$(aws ecs describe-task-definition --task-definition demo-tmcdapne2 --query 'taskDefinition.taskDefinitionArn' --output text)
+      - echo $TASK_DEFINITION_ARN
+      - sed -i '' "s|\[TaskDefinition ARN\]|${TASK_DEFINITION_ARN}|g" appspec.json
+      - json_string=$(jq -c . appspec.json| jq -Rr '@json' | sed 's/"/\\"/g') 
+      - echo ${json_string}
+      - sed -i '' "s|DEPLOYMENT_SPEC|${json_string}|g" codedeploy-template.json
+      - aws deploy create-deployment --cli-input-json file://codedeploy-template.json
