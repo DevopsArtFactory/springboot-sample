@@ -12,8 +12,8 @@ import org.springframework.beans.factory.annotation.Value;
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/sample")
 public class SampleController {
-    @Value("${sample.id}")
-    String sampleId;
+    // @Value("${sample.id}")
+    // String sampleId;
 
     @Value("${sample.password}")
     String samplePassword;
@@ -32,9 +32,6 @@ public class SampleController {
     @GetMapping("/testSecrets")
     public String getValue() {
         StringBuilder returnMsg = new StringBuilder();
-        returnMsg.append("Id :");
-        returnMsg.append(sampleId);
-        returnMsg.append("\n");
         returnMsg.append("Password :");
         returnMsg.append(samplePassword);
         return returnMsg.toString();
