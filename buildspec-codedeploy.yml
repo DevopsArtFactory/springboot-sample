@@ -8,15 +8,15 @@ phases:
   pre_build:
     commands:
       # 환경 변수 설정
-      - aws ecs describe-task-definition --task-definition demo-tmcdapne2 --query 'taskDefinition' --output json > task-definition.json
-      - jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)' task-definition.json > cleaned-task-definition.json
-      - aws ecs register-task-definition --cli-input-json file://cleaned-task-definition.json > /dev/null
+      - aws ecs describe-task-definition --task-definition demo-tmcdapne2 --query 'taskDefinition' --output json > $CODEBUILD_SRC_DIR/task-definition.json
+      - jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)' $CODEBUILD_SRC_DIR/task-definition.json > $CODEBUILD_SRC_DIR/cleaned-task-definition.json
+      - aws ecs register-task-definition --cli-input-json file://$CODEBUILD_SRC_DIR/cleaned-task-definition.json > /dev/null
   build:
     commands:
       - TASK_DEFINITION_ARN=$(aws ecs describe-task-definition --task-definition demo-tmcdapne2 --query 'taskDefinition.taskDefinitionArn' --output text)
       - echo $TASK_DEFINITION_ARN
-      - sed -i "s/ARN/${TASK_DEFINITION_ARN}/g" appspec.json
-      - json_string=$(jq -c . ./appspec.json| jq -Rr '@json' | sed 's/"/\\"/g') 
+      - sed -i "s/ARN/${TASK_DEFINITION_ARN}/g" $CODEBUILD_SRC_DIR/appspec.json
+      - json_string=$(jq -c . $CODEBUILD_SRC_DIR/appspec.json| jq -Rr '@json' | sed 's/"/\\"/g') 
       - echo ${json_string}
-      - sed -i "s/DEPLOYMENT_SPEC/${json_string}/g" codedeploy-template.json
-      - aws deploy create-deployment --cli-input-json file://codedeploy-template.json
+      - sed -i "s/DEPLOYMENT_SPEC/${json_string}/g" $CODEBUILD_SRC_DIR/codedeploy-template.json
+      - aws deploy create-deployment --cli-input-json file://$CODEBUILD_SRC_DIR/codedeploy-template.json
