@@ -15,6 +15,7 @@ phases:
     commands:
       - TASK_DEFINITION_ARN=$(aws ecs describe-task-definition --task-definition demo-tmcdapne2 --query 'taskDefinition.taskDefinitionArn' --output text)
       - echo $TASK_DEFINITION_ARN
+      - ls
       - sed -i '' "s/\[TaskDefinition ARN\]/${TASK_DEFINITION_ARN}/g" appspec.json
       - json_string=$(jq -c . appspec.json| jq -Rr '@json' | sed 's/"/\\"/g') 
       - echo ${json_string}
