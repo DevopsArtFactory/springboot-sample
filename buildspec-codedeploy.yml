@@ -1,15 +1,21 @@
 version: 0.2
 
+env:
+  IMAGE_TAG: ""
+
 phases:
   install:
     commands:
       - aws --version
+      - echo Installing dependencies...
+      - yum install -y jq 
 
   pre_build:
     commands:
-      # 환경 변수 설정
       - aws ecs describe-task-definition --task-definition demo-tmcdapne2 --query 'taskDefinition' --output json > $CODEBUILD_SRC_DIR/task-definition.json
       - jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)' $CODEBUILD_SRC_DIR/task-definition.json > $CODEBUILD_SRC_DIR/cleaned-task-definition.json
+      - jq '.containerDefinitions[].image |= gsub(":[^:]+$"; ":${IMAGE_TAG}")' $CODEBUILD_SRC_DIR/cleaned-task-definition.json
+      - echo "Register new task definition"
       - aws ecs register-task-definition --cli-input-json file://$CODEBUILD_SRC_DIR/cleaned-task-definition.json > /dev/null
   build:
     commands:
@@ -19,4 +25,5 @@ phases:
       - json_string=$(jq -c . $CODEBUILD_SRC_DIR/appspec.json| jq -Rr '@json' | sed 's/"/\\"/g') 
       - echo ${json_string}
       - sed -i "s|DEPLOYMENT_SPEC|${json_string}|g" $CODEBUILD_SRC_DIR/codedeploy-template.json
-      - aws deploy create-deployment --cli-input-json file://$CODEBUILD_SRC_DIR/codedeploy-template.json
+      - DEPLOYMENT_ID=$(aws deploy create-deployment --cli-input-json file://$CODEBUILD_SRC_DIR/codedeploy-template.json --query "deploymentId" --output text)
+      - echo "Create new deployment by codedeploy : ${DEPLOYMENT_ID}"
