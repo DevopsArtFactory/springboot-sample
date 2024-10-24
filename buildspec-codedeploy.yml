@@ -26,4 +26,4 @@ phases:
       - echo ${json_string}
       - sed -i "s|DEPLOYMENT_SPEC|${json_string}|g" $CODEBUILD_SRC_DIR/codedeploy-template.json
       - DEPLOYMENT_ID=$(aws deploy create-deployment --cli-input-json file://$CODEBUILD_SRC_DIR/codedeploy-template.json --query "deploymentId" --output text)
-      - echo "Create new deployment by codedeploy : ${DEPLOYMENT_ID}"
+      - echo "Create new deployment by codedeploy - ${DEPLOYMENT_ID}"
