@@ -59,7 +59,7 @@ jobs:
     - name: copy jar to s3
       uses: imehedi/actions-awscli-v2@latest
       with:
-        args: s3 cp build/libs/demo*.jar s3://tmc-service-deployment/demoapp/${{ github.base_ref }}/demoapp-${{ steps.vars.outputs.sha_short }}.jar
+        args: s3 cp ./build/libs/demo*.jar s3://tmc-service-deployment/demoapp/${{ github.base_ref }}/demoapp-${{ steps.vars.outputs.sha_short }}.jar
     
     # ECR LOGIN
     # - name: Login to Amazon ECR
