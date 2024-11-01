@@ -24,7 +24,7 @@ env:
 jobs:
   build:
     if: ${{ github.event.pull_request.merged }}
-    runs-on: ubuntu-latest
+    runs-on: springboot-sample-runner
 
     steps:
     - uses: actions/checkout@v4
