@@ -100,13 +100,13 @@ jobs:
 
     - name: Change Image tag
       run: |
-        sed -i '/^/s/tag:.*/tag: ${{ steps.vars.outputs.tag }}/' ./${CLUSTER_NAME}/${APP_NAME}/image.yaml
+        sed -i '/^/s/tag:.*/tag: ${{ steps.vars.outputs.sha_short }}/' ./${CLUSTER_NAME}/${APP_NAME}/image.yaml
         ls
       shell: bash
 
     - name: GIT commit and push docs
       env:
-        CI_COMMIT_MESSAGE: Update Tag - ${{ steps.vars.outputs.tag }}
+        CI_COMMIT_MESSAGE: Update Tag - ${{ steps.vars.outputs.sha_short }}
         CI_COMMIT_AUTHOR: zerone
       run: |
         git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
