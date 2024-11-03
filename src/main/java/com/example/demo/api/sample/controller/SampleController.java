@@ -34,6 +34,8 @@ public class SampleController {
         StringBuilder returnMsg = new StringBuilder();
         returnMsg.append("ID :");
         returnMsg.append(sampleId);
+        returnMsg.append("Password :");
+        returnMsg.append(samplePassword);
         return returnMsg.toString();
     }
 }
