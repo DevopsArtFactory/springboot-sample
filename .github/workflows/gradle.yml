@@ -47,8 +47,8 @@ jobs:
       uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
 
     - name: Build with Gradle Wrapper
-      run: ./gradlew bootJar
-      
+      run: ./gradlew bootBuildImage --imageName=${{ secrets.AWS_ACCOUNT_NUM }}.dkr.ecr.${{ env.REGION }}.amazonaws.com/demoapp:d${{ steps.vars.outputs.sha_short }}
+
     # AWS 인증
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
@@ -56,19 +56,15 @@ jobs:
         aws-region: ${{ env.REGION }}
         role-to-assume: ${{ secrets.ASSUME_IAM_ROLE }}
 
-    - name: copy jar to s3
-      run: |
-        aws s3 cp build/libs/demo*.jar s3://tmc-service-deployment/demoapp/${{ github.base_ref }}/demoapp-${{ steps.vars.outputs.sha_short }}.jar
-    
     # ECR LOGIN
-    # - name: Login to Amazon ECR
-    #   id: login-ecr
-    #   uses: aws-actions/amazon-ecr-login@v2
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
 
-    # - name: Publish Docker image
-    #   run: |
-    #       docker push ${{ secrets.AWS_ACCOUNT_NUM }}.dkr.ecr.${{ env.REGION }}.amazonaws.com/demoapp:d${{ steps.vars.outputs.sha_short }}          
-      
+    - name: Publish Docker image
+      run: |
+          docker push ${{ secrets.AWS_ACCOUNT_NUM }}.dkr.ecr.${{ env.REGION }}.amazonaws.com/demoapp:d${{ steps.vars.outputs.sha_short }}    
+
     # - name: Download task definition
     #   run: |
     #      aws ecs describe-task-definition --task-definition demo-tmcdapne2 --query taskDefinition > task-definition.json
