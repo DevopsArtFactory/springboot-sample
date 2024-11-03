@@ -17,10 +17,13 @@ on:
 permissions:
   id-token: write
   contents: read
+  packages: write
 
 env:
   REGION: ap-northeast-2
-  
+  CLUSTER_NAME: tmcdapne2-nhwy
+  APP_NAME: demoapp
+
 jobs:
   build:
     if: ${{ github.event.pull_request.merged }}
@@ -88,27 +91,27 @@ jobs:
     #     codedeploy-application: demo_app
     #     codedeploy-deployment-group: demo_app
   
-    # - name: Checkout k8s-env
-    #   uses: actions/checkout@v4
-    #   with:
-    #     token: ${{ secrets.INFRA_GITHUB_TOKEN }}
-    #     repository: DevopsArtFactory/k8s-chart-value
-    #     ref: main
+    - name: Checkout k8s-env
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.INFRA_GITHUB_TOKEN }}
+        repository: DevopsArtFactory/k8s-chart-value
+        ref: main
 
-    # - name: Change Image tag
-    #   run: |
-    #     sed -i '/^/s/tag:.*/tag: ${{ steps.vars.outputs.tag }}/' ./${CLUSTER_NAME}/${APP_NAME}/image.yaml
-    #     ls
-    #   shell: bash
+    - name: Change Image tag
+      run: |
+        sed -i '/^/s/tag:.*/tag: ${{ steps.vars.outputs.tag }}/' ./${CLUSTER_NAME}/${APP_NAME}/image.yaml
+        ls
+      shell: bash
 
-    # - name: GIT commit and push docs
-    #   env:
-    #     CI_COMMIT_MESSAGE: Update Tag - ${{ steps.vars.outputs.tag }}
-    #     CI_COMMIT_AUTHOR: zerone
-    #   run: |
-    #     git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
-    #     git config --global user.email "zerone5078@gmail.com"
-    #     git status
-    #     git add -A
-    #     git commit -m "${{ env.CI_COMMIT_MESSAGE }}"
-    #     git push origin main
+    - name: GIT commit and push docs
+      env:
+        CI_COMMIT_MESSAGE: Update Tag - ${{ steps.vars.outputs.tag }}
+        CI_COMMIT_AUTHOR: zerone
+      run: |
+        git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
+        git config --global user.email "zerone5078@gmail.com"
+        git status
+        git add -A
+        git commit -m "${{ env.CI_COMMIT_MESSAGE }}"
+        git push origin main
