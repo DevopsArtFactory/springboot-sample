@@ -17,6 +17,7 @@ public class SampleController {
 
     @Value("${sample.password}")
     String samplePassword;
+    
     @GetMapping("/hello")
     @ResponseStatus(HttpStatus.OK)
     public String getHello(){
@@ -26,7 +27,13 @@ public class SampleController {
     @GetMapping("/terraform")
     @ResponseStatus(HttpStatus.OK)
     public String getTerraform(){
-        return "<h1>Hello, Terraform Master Class</h1>";
+        return "<h1>Hello, Terraform Class</h1>";
+    }
+
+    @GetMapping("/eks")
+    @ResponseStatus(HttpStatus.OK)
+    public String getEks(){
+        return "<h1>Hello, Eks Class</h1>";
     }
 
     @GetMapping("/testSecrets")
