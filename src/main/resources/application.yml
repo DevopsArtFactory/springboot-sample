@@ -10,3 +10,10 @@ sample:
 
 custom:
   token: ${token_value:U2FtcGxlIERldk9wcyB0b2tlbiB2YWx1ZXMK}
+
+logging:
+  level:
+    com.example.demo: DEBUG
+    org.springframework.security: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
