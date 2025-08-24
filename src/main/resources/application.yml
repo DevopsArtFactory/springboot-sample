@@ -5,5 +5,8 @@ spring:
     import: optional:aws-secretsmanager:/secret/demo
 
 sample:
-  id: ${id}
-  password: ${password}
+  id: ${id:test}
+  password: ${password:test}
+
+custom:
+  token: ${token_value:U2FtcGxlIERldk9wcyB0b2tlbiB2YWx1ZXMK}
